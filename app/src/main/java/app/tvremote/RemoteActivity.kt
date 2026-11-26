@@ -2,7 +2,6 @@ package app.tvremote
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
@@ -14,6 +13,8 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import app.tvremote.Ui.dp
+import app.tvremote.Ui.fitSystemBars
+import android.graphics.drawable.LayerDrawable
 import app.tvremote.Ui.text
 
 class RemoteActivity : Activity() {
@@ -33,8 +34,9 @@ class RemoteActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
             setBackgroundColor(Ui.BG)
-            setPadding(dp(20), dp(20), dp(20), dp(20))
+            setPadding(dp(20), dp(12), dp(20), dp(12))
         }
+        root.fitSystemBars()
 
         // Header: name + status, power button on the right.
         val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
@@ -43,8 +45,11 @@ class RemoteActivity : Activity() {
         status = text("连接中…", 13f, Ui.SUB)
         titles.addView(status)
         header.addView(titles, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        header.addView(key("⏻", Btn.POWER, 56, Ui.RED, 22f))
+        header.addView(key("", Btn.POWER, 56, Ui.RED, 22f, power = true))
         root.addView(header, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+
+        val body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER }
+        root.addView(body, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
 
         // D-pad.
         val padSize = dp(290)
@@ -57,22 +62,22 @@ class RemoteActivity : Activity() {
         place(key("◀", Btn.LEFT, 84, Ui.CARD, 26f), Gravity.START or Gravity.CENTER_VERTICAL)
         place(key("▶", Btn.RIGHT, 84, Ui.CARD, 26f), Gravity.END or Gravity.CENTER_VERTICAL)
         place(key("OK", Btn.OK, 110, Ui.KEY, 22f), Gravity.CENTER)
-        root.addView(pad, LinearLayout.LayoutParams(padSize, padSize).apply { topMargin = dp(36); bottomMargin = dp(32) })
+        body.addView(pad, LinearLayout.LayoutParams(padSize, padSize).apply { bottomMargin = dp(32) })
 
         val apple = device.type == TvType.APPLE
-        root.addView(row(
+        body.addView(row(
             key(if (apple) "‹ 返回" else "← 返回", Btn.BACK, 76, Ui.KEY, 15f),
-            key(if (apple) "⌂ 主页" else "⌂ 主页", Btn.HOME, 76, Ui.KEY, 15f),
+            key("⌂ 主页", Btn.HOME, 76, Ui.KEY, 15f),
             key("⏯", Btn.PLAY_PAUSE, 76, Ui.KEY, 24f),
         ))
         val volume = mutableListOf(key("音量−", Btn.VOL_DOWN, 76, Ui.KEY, 15f))
         if (Btn.MUTE in controller.supported) volume.add(key("静音", Btn.MUTE, 76, Ui.KEY, 15f))
         volume.add(key("音量+", Btn.VOL_UP, 76, Ui.KEY, 15f))
-        root.addView(row(*volume.toTypedArray()), LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(18) })
+        body.addView(row(*volume.toTypedArray()), LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(18) })
 
         val hint = if (apple) "按住「主页」可打开控制中心；手机音量键也能调电视音量"
         else "长按按键等同遥控器长按；手机音量键也能调电视音量"
-        root.addView(text(hint, 12f, Ui.SUB).apply { gravity = Gravity.CENTER; setPadding(0, dp(24), 0, 0) })
+        body.addView(text(hint, 12f, Ui.SUB).apply { gravity = Gravity.CENTER; setPadding(0, dp(24), 0, 0) })
 
         setContentView(root)
         controller.connect()
@@ -89,26 +94,26 @@ class RemoteActivity : Activity() {
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    private fun key(label: String, b: Btn, sizeDp: Int, color: Int, textSize: Float): View {
+    private fun key(label: String, b: Btn, sizeDp: Int, color: Int, textSize: Float, power: Boolean = false): View {
         val bg = Ui.rounded(color, 0f, oval = true)
         return TextView(this).apply {
             text = label
             this.textSize = textSize
             setTextColor(Ui.TEXT)
             gravity = Gravity.CENTER
-            background = bg
+            background = if (power) LayerDrawable(arrayOf(bg, Ui.PowerGlyph(dp(3).toFloat()))) else bg
             layoutParams = LinearLayout.LayoutParams(dp(sizeDp), dp(sizeDp))
             minWidth = dp(sizeDp); minHeight = dp(sizeDp)
             width = dp(sizeDp); height = dp(sizeDp)
             setOnTouchListener { v, e ->
                 when (e.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
-                        (v.background as GradientDrawable).setColor(Ui.KEY_PRESSED)
+                        bg.setColor(Ui.KEY_PRESSED)
                         v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                         controller.down(b)
                     }
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                        (v.background as GradientDrawable).setColor(color)
+                        bg.setColor(color)
                         controller.up(b)
                     }
                 }

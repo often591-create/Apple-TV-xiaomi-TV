@@ -53,6 +53,41 @@ object Ui {
         return box
     }
 
+    /** Android 15+ draws apps behind the status/navigation bars: pad the content so nothing overlaps. */
+    fun View.fitSystemBars() {
+        if (android.os.Build.VERSION.SDK_INT < 35) return
+        val l = paddingLeft; val t = paddingTop; val r = paddingRight; val b = paddingBottom
+        setOnApplyWindowInsetsListener { v, insets ->
+            val bars = insets.getInsets(android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout())
+            v.setPadding(l + bars.left, t + bars.top, r + bars.right, b + bars.bottom)
+            insets
+        }
+        requestApplyInsets()
+    }
+
+    /** A power symbol drawn with lines, so it never depends on the phone's fonts. */
+    class PowerGlyph(private val strokePx: Float) : android.graphics.drawable.Drawable() {
+        private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = strokePx
+            strokeCap = android.graphics.Paint.Cap.ROUND
+        }
+
+        override fun draw(canvas: android.graphics.Canvas) {
+            val b = bounds
+            val cx = b.exactCenterX(); val cy = b.exactCenterY()
+            val r = b.width() * 0.2f
+            canvas.drawArc(cx - r, cy - r + r * 0.15f, cx + r, cy + r + r * 0.15f, -60f, 300f, false, paint)
+            canvas.drawLine(cx, cy - r * 1.15f, cx, cy - r * 0.1f, paint)
+        }
+
+        override fun setAlpha(alpha: Int) { paint.alpha = alpha }
+        override fun setColorFilter(cf: android.graphics.ColorFilter?) { paint.colorFilter = cf }
+        @Deprecated("Deprecated in Java")
+        override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
+    }
+
     fun Activity.ask(title: String, hint: String, numeric: Boolean, onOk: (String) -> Unit, onCancel: () -> Unit = {}) {
         val input = EditText(this).apply {
             this.hint = hint

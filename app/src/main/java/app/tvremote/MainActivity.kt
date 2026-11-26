@@ -12,6 +12,7 @@ import android.widget.Toast
 import app.tvremote.Ui.ask
 import app.tvremote.Ui.card
 import app.tvremote.Ui.dp
+import app.tvremote.Ui.fitSystemBars
 import app.tvremote.Ui.text
 import app.tvremote.core.CompanionClient
 import app.tvremote.core.GoogleTvPairing
@@ -51,6 +52,7 @@ class MainActivity : Activity() {
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(50)).apply { topMargin = dp(16) })
 
         val scroll = ScrollView(this).apply { setBackgroundColor(Ui.BG); addView(root) }
+        scroll.fitSystemBars()
         setContentView(scroll)
     }
 
